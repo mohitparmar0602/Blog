@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h1 class="page-title fs-3 mb-0">
+        <i class="bi bi-shield-lock text-success me-2"></i>Admin Dashboard
+    </h1>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-5">
+    <div class="col-md-4">
+        <div class="card border text-center p-4">
+            <div class="stat-number text-primary">{{ users | length }}</div>
+            <div class="text-secondary small mt-1">Total Users</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border text-center p-4">
+            <div class="stat-number text-success">{{ posts | selectattr('published') | list | length }}</div>
+            <div class="text-secondary small mt-1">Published Posts</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border text-center p-4">
+            <div class="stat-number text-warning">{{ posts | rejectattr('published') | list | length }}</div>
+            <div class="text-secondary small mt-1">Drafts</div>
+        </div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<h2 class="text-uppercase text-secondary small fw-bold mb-3" style="letter-spacing:1px;">
+    <i class="bi bi-people me-1"></i> Users
+</h2>
+<div class="table-responsive rounded-3 border mb-5">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light border-bottom">
+            <tr>
+                <th class="text-secondary small text-uppercase fw-bold ps-3">#</th>
+                <th class="text-secondary small text-uppercase fw-bold">User</th>
+                <th class="text-secondary small text-uppercase fw-bold">Email</th>
+                <th class="text-secondary small text-uppercase fw-bold">Role</th>
+                <th class="text-secondary small text-uppercase fw-bold">Joined</th>
+                <th class="text-secondary small text-uppercase fw-bold">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td class="ps-3 text-secondary small">{{ user.id }}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="avatar">{{ user.username[0].upper() }}</div>
+                        <span class="fw-semibold">{{ user.username }}</span>
+                        {% if user.id == current_user.id %}
+                        <span class="badge bg-secondary">You</span>
+                        {% endif %}
+                    </div>
+                </td>
+                <td class="text-secondary small">{{ user.email }}</td>
+                <td>
+                    {% if user.role == 'admin' %}
+                    <span class="badge bg-danger">admin</span>
+                    {% elif user.role == 'author' %}
+                    <span class="badge bg-success">author</span>
+                    {% else %}
+                    <span class="badge bg-info text-dark">reader</span>
+                    {% endif %}
+                </td>
+                <td class="text-secondary small">{{ user.created_at.strftime('%b %d, %Y') }}</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <form action="{{ url_for('change_role', user_id=user.id) }}" method="POST"
+                            class="d-flex gap-2 align-items-center">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <select name="role" class="form-select form-select-sm border" style="width:auto;">
+                                <option value="reader" {% if user.role=='reader' %}selected{% endif %}>Reader</option>
+                                <option value="author" {% if user.role=='author' %}selected{% endif %}>Author</option>
+                                <option value="admin" {% if user.role=='admin' %}selected{% endif %}>Admin</option>
+                            </select>
+                            <button class="btn btn-success btn-sm rounded-pill">Set</button>
+                        </form>
+                        {% if user.id != current_user.id %}
+                        <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST"
+                            onsubmit="return confirm('Delete {{ user.username }}?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button class="btn btn-outline-danger btn-sm rounded-pill">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Posts Table -->
+<h2 class="text-uppercase text-secondary small fw-bold mb-3" style="letter-spacing:1px;">
+    <i class="bi bi-journals me-1"></i> All Posts
+</h2>
+<div class="table-responsive rounded-3 border">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light border-bottom">
+            <tr>
+                <th class="text-secondary small text-uppercase fw-bold ps-3">Title</th>
+                <th class="text-secondary small text-uppercase fw-bold">Author</th>
+                <th class="text-secondary small text-uppercase fw-bold">Status</th>
+                <th class="text-secondary small text-uppercase fw-bold">Created</th>
+                <th class="text-secondary small text-uppercase fw-bold">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for post in posts %}
+            <tr>
+                <td class="ps-3">
+                    <a href="{{ url_for('post_detail', slug=post.slug) }}"
+                        class="fw-semibold text-decoration-none text-dark">{{ post.title }}</a>
+                </td>
+                <td class="text-secondary small">{{ post.author.username }}</td>
+                <td>
+                    {% if post.published %}
+                    <span class="badge bg-success">Published</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark">Draft</span>
+                    {% endif %}
+                </td>
+                <td class="text-secondary small">{{ post.created_at.strftime('%b %d, %Y') }}</td>
+                <td>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('edit_post', post_id=post.id) }}"
+                            class="btn btn-outline-secondary btn-sm rounded-pill">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form action="{{ url_for('toggle_published', post_id=post.id) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button class="btn btn-sm rounded-pill
+                    {% if post.published %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                                {% if post.published %}Unpublish{% else %}Publish{% endif %}
+                            </button>
+                        </form>
+                        <form action="{{ url_for('delete_post', post_id=post.id) }}" method="POST"
+                            onsubmit="return confirm('Delete this post?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                            <button class="btn btn-outline-danger btn-sm rounded-pill">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
