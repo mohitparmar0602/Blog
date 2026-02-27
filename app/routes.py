@@ -3,7 +3,13 @@ import urllib.request
 import urllib.parse
 import json
 
-from flask import render_template, redirect, url_for, flash, request, abort, current_app
+from flask import (
+    render_template, 
+    redirect, url_for, 
+    flash, request, 
+    abort, 
+    current_app,
+)
 from flask_login import login_user, logout_user, login_required, current_user
 from slugify import slugify
 
